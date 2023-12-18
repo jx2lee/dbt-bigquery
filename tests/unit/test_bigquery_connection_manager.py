@@ -10,7 +10,7 @@ import dbt.dataclass_schema
 
 from dbt.adapters.bigquery import BigQueryCredentials
 from dbt.adapters.bigquery import BigQueryRelation
-from dbt.adapters.bigquery.connections import BigQueryConnectionManager
+from dbt.adapters.bigquery.connections import BigQueryConnectionManager, BigQueryConnectionMethod
 import dbt.exceptions
 from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 
@@ -186,6 +186,14 @@ class TestBigQueryConnectionManager(unittest.TestCase):
             project="project", max_results=10000
         )
         assert result == ["d1"]
+
+    def test_get_google_credentials_base64(self):
+        profile_credentials = Mock(
+            method=BigQueryConnectionMethod.SERVICE_ACCOUNT_BASE64_JSON,
+            keyfile_base64_json='your_base64_encoded_json_here',
+            scopes=['your', 'scopes', 'here']
+        )
+        pass
 
     def _table_ref(self, proj, ds, table):
         return self.connections.table_ref(proj, ds, table)

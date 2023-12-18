@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import functools
 import json
 import re
@@ -97,6 +98,7 @@ class BigQueryConnectionMethod(StrEnum):
     OAUTH = "oauth"
     SERVICE_ACCOUNT = "service-account"
     SERVICE_ACCOUNT_JSON = "service-account-json"
+    SERVICE_ACCOUNT_BASE64_JSON = "service-account-base64-json"
     OAUTH_SECRETS = "oauth-secrets"
 
 
@@ -138,6 +140,7 @@ class BigQueryCredentials(Credentials):
     # Keyfile json creds
     keyfile: Optional[str] = None
     keyfile_json: Optional[Dict[str, Any]] = None
+    keyfile_base64_json: Optional[Dict[str, Any]] = None
 
     # oauth-secrets
     token: Optional[str] = None
@@ -329,6 +332,12 @@ class BigQueryConnectionManager(BaseConnectionManager):
         rows_number *= 1000.0
         return f"{rows_number:3.1f}{unit}".strip()
 
+    @staticmethod
+    def decode_values(encoded):
+        return {
+            key: base64.b64decode(value).decode("utf-8") for key, value in encoded.items()
+        }
+
     @classmethod
     def get_google_credentials(cls, profile_credentials) -> GoogleCredentials:
         method = profile_credentials.method
@@ -345,6 +354,11 @@ class BigQueryConnectionManager(BaseConnectionManager):
         elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT_JSON:
             details = profile_credentials.keyfile_json
             return creds.from_service_account_info(details, scopes=profile_credentials.scopes)
+
+        elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT_BASE64_JSON:
+            sa_base64_json = profile_credentials.keyfile_base64_json
+            sa_json_content = base64.b64decode(cls.decode_values(sa_base64_json))
+            return creds.from_service_account_info(sa_json_content, scopes=profile_credentials.scopes)
 
         elif method == BigQueryConnectionMethod.OAUTH_SECRETS:
             return GoogleCredentials.Credentials(
